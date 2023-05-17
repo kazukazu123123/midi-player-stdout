@@ -5,7 +5,7 @@ use std::{
 
 use clap::Parser;
 use midi_toolkit::{
-    events::Event::{NoteOff, NoteOn},
+    events::MIDIEvent,
     io::MIDIFile,
     pipe,
     sequence::{
@@ -55,15 +55,18 @@ fn main() {
             }
         }
 
-        match e.event {
-            NoteOn(evt) => {
-                println!("1,{},{},{}", evt.channel, evt.key, evt.velocity)
+        if let Some(serialized) = e.as_u32() {
+            let mut chunks: Vec<String> = Vec::new();
+        
+            for i in (0..24).step_by(8) {
+                let chunk = ((serialized >> i) & 0xFF) as u8;
+                chunks.push(format!("{:02X}", chunk));
             }
-            NoteOff(evt) => {
-                println!("0,{},{}", evt.channel, evt.key)
-            }
-            _ => {}
+        
+            let joined = chunks.join(",");
+            println!("{}", joined);
         }
+        
     }
     println!("evt_playing_finished");
 }
