@@ -31,6 +31,15 @@ fn main() {
 
     println!("evt_parsed");
 
+    let stats = pipe!(
+      midi.iter_all_tracks()
+      |>to_vec()
+      |>merge_events_array()
+      |>get_channel_statistics().unwrap()
+    );
+
+    println!("evt_note_count,{}", stats.note_count());
+
     let ppq = midi.ppq();
     let merged = pipe!(
         midi.iter_all_tracks()
@@ -46,6 +55,7 @@ fn main() {
     let mut time = 0.0;
 
     println!("evt_playing");
+
     for e in merged {
         if e.delta != 0.0 {
             time += e.delta;
@@ -57,16 +67,15 @@ fn main() {
 
         if let Some(serialized) = e.as_u32() {
             let mut chunks: Vec<String> = Vec::new();
-        
+
             for i in (0..24).step_by(8) {
                 let chunk = ((serialized >> i) & 0xFF) as u8;
                 chunks.push(format!("{:02X}", chunk));
             }
-        
+
             let joined = chunks.join(",");
             println!("{}", joined);
         }
-        
     }
     println!("evt_playing_finished");
 }
