@@ -9,7 +9,7 @@ use midi_toolkit::{
     io::MIDIFile,
     pipe,
     sequence::{
-        event::{cancel_tempo_events, merge_events_array, scale_event_time},
+        event::{cancel_tempo_events, merge_events_array, scale_event_time, get_channel_statistics},
         to_vec, unwrap_items, TimeCaster,
     },
 };
@@ -32,7 +32,7 @@ fn main() {
     println!("evt_parsed");
 
     let stats = pipe!(
-      midi.iter_all_tracks()
+      midi.iter_all_tracks()  
       |>to_vec()
       |>merge_events_array()
       |>get_channel_statistics().unwrap()
