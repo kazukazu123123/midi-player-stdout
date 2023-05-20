@@ -25,11 +25,11 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    println!("evt_parsing");
+    eprintln!("evt_parsing");
 
     let midi = MIDIFile::open(args.midi_file, None).unwrap();
 
-    println!("evt_parsed");
+    eprintln!("evt_parsed");
 
     let stats = pipe!(
       midi.iter_all_tracks()  
@@ -38,7 +38,7 @@ fn main() {
       |>get_channel_statistics().unwrap()
     );
 
-    println!("evt_note_count,{}", stats.note_count());
+    eprintln!("evt_note_count,{}", stats.note_count());
 
     let ppq = midi.ppq();
     let merged = pipe!(
@@ -54,7 +54,7 @@ fn main() {
     let now = Instant::now();
     let mut time = 0.0;
 
-    println!("evt_playing");
+    eprintln!("evt_playing");
 
     for e in merged {
         if e.delta != 0.0 {
@@ -71,5 +71,5 @@ fn main() {
             io::stdout().write_all(b"\n").unwrap();
         }
     }
-    println!("evt_playing_finished");
+    eprintln!("evt_playing_finished");
 }
