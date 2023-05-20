@@ -1,6 +1,6 @@
 use std::{
     thread,
-    time::{Duration, Instant}, io::{self, Write},
+    time::{Duration, Instant},
 };
 
 use clap::Parser;
@@ -66,9 +66,15 @@ fn main() {
         }
 
         if let Some(serialized) = e.as_u32() {
-            let byte_slice: [u8; 4] = serialized.to_le_bytes();
-            io::stdout().write_all(&byte_slice).unwrap();
-            io::stdout().write_all(b"\n").unwrap();
+            let mut chunks: Vec<String> = Vec::new();
+
+            for i in (0..24).step_by(8) {
+                let chunk = ((serialized >> i) & 0xFF) as u8;
+                chunks.push(format!("{:02X}", chunk));
+            }
+
+            let joined = chunks.join(",");
+            println!("{}", joined);
         }
     }
     println!("evt_playing_finished");
