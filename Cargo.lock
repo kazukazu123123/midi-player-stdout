@@ -165,9 +165,8 @@ checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
 
 [[package]]
 name = "gen-iter"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1668ac3c7b8cc5f1e31565ed509d8d70aa1a81bd7f508b620725b78c6e1d7049"
+version = "0.4.0"
+source = "git+https://github.com/arduano/gen-iter.git?rev=64e28bc#64e28bc74b406030ff9bb3a3726a770a8fb4f78b"
 
 [[package]]
 name = "heck"
@@ -195,7 +194,7 @@ dependencies = [
 [[package]]
 name = "midi-toolkit-rs"
 version = "0.1.0"
-source = "git+https://github.com/arduano/midi-toolkit-rs#cff22acf3a3113ac9f1f05b0fb8f9cd30f3f95ac"
+source = "git+https://github.com/arduano/midi-toolkit-rs#a54f19890e47c90a246001b9f8b2519f3604eb58"
 dependencies = [
  "crossbeam-channel",
  "gen-iter",
@@ -208,7 +207,7 @@ dependencies = [
 [[package]]
 name = "midi-toolkit-rs-derive"
 version = "0.1.0"
-source = "git+https://github.com/arduano/midi-toolkit-rs#cff22acf3a3113ac9f1f05b0fb8f9cd30f3f95ac"
+source = "git+https://github.com/arduano/midi-toolkit-rs#a54f19890e47c90a246001b9f8b2519f3604eb58"
 dependencies = [
  "convert_case",
  "num-traits",
