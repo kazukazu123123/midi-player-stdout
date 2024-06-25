@@ -1,0 +1,74 @@
+name: build
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+  workflow_call:
+    inputs:
+      tag-name:
+        required: true
+        type: string
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [aarch64-unknown-linux-gnu, aarch64-unknown-linux-musl]
+        use-cross: [true]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            use-cross: false
+          - target: x86_64-unknown-linux-musl
+            use-cross: false
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+          - os: windows-2022
+            target: x86_64-pc-windows-gnu
+    runs-on: ${{ matrix.os || 'ubuntu-22.04'}}
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    defaults:
+      run:
+        shell: bash -xe {0}
+    steps:
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          sudo apt-get install -y musl-tools --no-install-recommends
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84 # v2.7.3
+        with:
+          key: ${{ matrix.target }}
+      - name: Install cross
+        if: ${{ !matrix.os && matrix.use-cross }}
+        uses: taiki-e/install-action@c2c0b6efca88e97964ac243a1bce7fa796e0f56f # v2.41.4
+        with:
+          tool: cross
+      - run: ${{ (!matrix.os && matrix.use-cross) && 'cross' || 'cargo' }} build --locked --release --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/midi-player-stdout
+            target/${{ matrix.target }}/release/midi-player-stdout.exe
+      - name: Upload to release
+        if: ${{ inputs.tag-name }}
+        working-directory: target/${{ matrix.target }}/release/
+        run: |
+          if [ -e midi-player-stdout.exe ]; then
+            filename="midi-player-stdout-${{ inputs.tag-name }}-${{ matrix.target }}.exe"
+            mv midi-player-stdout.exe "$filename"
+            gh release upload ${{ inputs.tag-name }} "$filename"#${{ matrix.target }} --clobber
+          else
+            filename="midi-player-stdout-${{ inputs.tag-name }}-${{ matrix.target }}"
+            mv midi-player-stdout "$filename"
+            gh release upload ${{ inputs.tag-name }} "$filename"#${{ matrix.target }} --clobber
+          fi
