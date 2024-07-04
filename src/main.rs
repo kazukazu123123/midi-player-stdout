@@ -9,9 +9,7 @@ use midi_toolkit::{
     io::MIDIFile,
     pipe,
     sequence::{
-        event::{
-            cancel_tempo_events, get_channel_statistics, merge_events_array, scale_event_time,
-        },
+        event::{cancel_tempo_events, merge_events_array, scale_event_time, get_channel_statistics},
         to_vec, unwrap_items, TimeCaster,
     },
 };
@@ -34,7 +32,7 @@ fn main() {
     eprintln!("evt_parsed");
 
     let stats = pipe!(
-      midi.iter_all_tracks()
+      midi.iter_all_tracks()  
       |>to_vec()
       |>merge_events_array()
       |>get_channel_statistics().unwrap()
@@ -68,14 +66,15 @@ fn main() {
         }
 
         if let Some(serialized) = e.as_u32() {
-            let mut buffer: Vec<u8> = Vec::new();
+            let mut chunks: Vec<String> = Vec::new();
 
             for i in (0..24).step_by(8) {
                 let chunk = ((serialized >> i) & 0xFF) as u8;
-                buffer.push(chunk);
+                chunks.push(format!("{:02X}", chunk));
             }
 
-            io::stdout().write_all(&buffer).unwrap();
+            let joined = chunks.join(",");
+            println!("{}", joined);
         }
     }
     eprintln!("evt_playing_finished");
