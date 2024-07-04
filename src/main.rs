@@ -1,5 +1,5 @@
 use std::{
-    io, thread,
+    thread,
     time::{Duration, Instant},
 };
 
