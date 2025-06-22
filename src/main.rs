@@ -1,4 +1,5 @@
 use std::{
+    sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant},
 };
@@ -9,7 +10,10 @@ use midi_toolkit::{
     io::MIDIFile,
     pipe,
     sequence::{
-        event::{cancel_tempo_events, merge_events_array, scale_event_time, get_channel_statistics},
+        event::{
+            cancel_tempo_events, get_channels_array_statistics, merge_events_array,
+            scale_event_time,
+        },
         to_vec, unwrap_items, TimeCaster,
     },
 };
@@ -22,6 +26,16 @@ struct Args {
     midi_file: String,
 }
 
+fn format_duration(duration: Duration) -> String {
+    let total_seconds = duration.as_secs_f64();
+    let hours = (total_seconds / 3600.0) as u64;
+    let minutes = ((total_seconds % 3600.0) / 60.0) as u64;
+    let seconds = (total_seconds % 60.0) as u64;
+
+    let ms = (total_seconds.fract() * 100.0) as u64;
+    format!("{:02}:{:02}:{:02}.{:02}", hours, minutes, seconds, ms)
+}
+
 fn main() {
     let args = Args::parse();
 
@@ -31,35 +45,68 @@ fn main() {
 
     eprintln!("evt_parsed");
 
-    let stats = pipe!(
-      midi.iter_all_tracks()  
-      |>to_vec()
-      |>merge_events_array()
-      |>get_channel_statistics().unwrap()
-    );
-
-    eprintln!("evt_note_count,{}", stats.note_count());
-
     let ppq = midi.ppq();
-    let merged = pipe!(
+    let merge_midi = || {
+        pipe!(
+            midi.iter_all_tracks()
+            |>to_vec()
+            |>merge_events_array()
+            |>TimeCaster::<f64>::cast_event_delta()
+            |>cancel_tempo_events(250000)
+            |>scale_event_time(1.0 / ppq as f64)
+            |>unwrap_items()
+        )
+    };
+
+    let statistics = pipe!(
         midi.iter_all_tracks()
         |>to_vec()
-        |>merge_events_array()
-        |>TimeCaster::<f64>::cast_event_delta()
-        |>cancel_tempo_events(250000)
-        |>scale_event_time(1.0 / ppq as f64)
-        |>unwrap_items()
-    );
+        |>get_channels_array_statistics()
+    )
+    .expect("Failed to calculate statistics we're doomed");
+    let midi_duration = statistics.calculate_total_duration(ppq);
+    let note_count = statistics.note_count();
+
+    eprintln!("evt_note_count,{}", note_count);
+    eprintln!("evt_duration_ns,{}", midi_duration.as_nanos());
+    eprintln!("evt_duration_formatted,{}", format_duration(midi_duration));
+
+    let merged = merge_midi();
 
     let now = Instant::now();
-    let mut time = 0.0;
+    let start_time = now.clone();
+    let is_playing = Arc::new(Mutex::new(true));
+    let is_playing_for_thread = is_playing.clone();
+
+    let progress_thread = thread::spawn(move || {
+        while *is_playing_for_thread.lock().unwrap() {
+            let real_elapsed = start_time.elapsed().as_secs_f64();
+
+            let elapsed = real_elapsed.min(midi_duration.as_secs_f64());
+            let percent = (elapsed / midi_duration.as_secs_f64()) * 100.0;
+
+            eprintln!(
+                "evt_progress,position_sec={:.3},total_sec={:.3},position_fmt={},total_fmt={},percent={:.1}",
+                elapsed,
+                midi_duration.as_secs_f64(),
+                format_duration(Duration::from_secs_f64(elapsed)),
+                format_duration(midi_duration),
+                percent
+            );
+
+            thread::sleep(Duration::from_millis(500));
+        }
+    });
 
     eprintln!("evt_playing");
+
+    let mut time = 0.0;
 
     for e in merged {
         if e.delta != 0.0 {
             time += e.delta;
             let diff = time - now.elapsed().as_secs_f64();
+
             if diff > 0.0 {
                 thread::sleep(Duration::from_secs_f64(diff));
             }
@@ -77,5 +124,12 @@ fn main() {
             println!("{}", joined);
         }
     }
+
+    *is_playing.lock().unwrap() = false;
+
+    if let Err(e) = progress_thread.join() {
+        eprintln!("Error joining progress thread: {:?}", e);
+    }
+
     eprintln!("evt_playing_finished");
 }
