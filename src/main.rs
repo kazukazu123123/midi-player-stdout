@@ -77,15 +77,16 @@ fn main() {
     let merged = merge_midi();
 
     let now = Instant::now();
-    let start_time = now.clone();
     let is_playing = Arc::new(Mutex::new(true));
+    let current_midi_time = Arc::new(Mutex::new(0.0));
     let is_playing_for_thread = is_playing.clone();
+    let current_midi_time_for_thread = current_midi_time.clone();
 
     let progress_thread = thread::spawn(move || {
         while *is_playing_for_thread.lock().unwrap() {
-            let real_elapsed = start_time.elapsed().as_secs_f64();
+            let midi_elapsed: f64 = *current_midi_time_for_thread.lock().unwrap();
 
-            let elapsed = real_elapsed.min(midi_duration.as_secs_f64());
+            let elapsed = midi_elapsed.min(midi_duration.as_secs_f64());
             let percent = (elapsed / midi_duration.as_secs_f64()) * 100.0;
 
             eprintln!(
@@ -113,6 +114,9 @@ fn main() {
             if diff > 0.0 {
                 thread::sleep(Duration::from_secs_f64(diff));
             }
+
+            // 現在のMIDI再生時間を更新
+            *current_midi_time.lock().unwrap() = time;
         }
 
         if let Some(serialized) = e.as_u32() {
