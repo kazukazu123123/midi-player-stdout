@@ -24,6 +24,9 @@ struct Args {
     /// Path of the midi file
     #[arg(short, long)]
     midi_file: String,
+    /// Log interval in milliseconds
+    #[arg(short, long, default_value_t = 500)]
+    log_interval: u64,
 }
 
 fn format_duration(duration: Duration) -> String {
@@ -94,7 +97,7 @@ fn main() {
                 percent
             );
 
-            thread::sleep(Duration::from_millis(500));
+            thread::sleep(Duration::from_millis(args.log_interval));
         }
     });
 
