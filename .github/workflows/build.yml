@@ -41,7 +41,7 @@ jobs:
           key: ${{ matrix.target }}
       - name: Install cross
         if: ${{ !matrix.os && matrix.use-cross }}
-        uses: taiki-e/install-action@5140f853a1cdf11adb558a08d00d06d67af3dea4 # v2.58.11
+        uses: taiki-e/install-action@9603d534897ca91e2e5961d2060d21b1c1f30ade # v2.58.14
         with:
           tool: cross
       - run: ${{ (!matrix.os && matrix.use-cross) && 'cross' || 'cargo' }} build --locked --release --target ${{ matrix.target }}
